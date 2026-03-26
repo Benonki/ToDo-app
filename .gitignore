@@ -4,7 +4,7 @@
 # dependencies
 Frontend/node_modules/
 BackendMongo/node_modules/
-BackendPostGreSQL/node_modules/
+BackendPostgreSQL/node_modules/
 
 # Native
 *.orig.*
@@ -29,6 +29,6 @@ yarn-error.*
 # env files
 BackendMongo/.env
 BackendMongo/*.env
-BackendPostGreSQL/.env
-BackendPostGreSQL/*.env
+BackendPostgreSQL/.env
+BackendPostgreSQL/*.env
 **/.env
