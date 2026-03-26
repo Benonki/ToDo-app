@@ -32,3 +32,5 @@ BackendMongo/*.env
 BackendPostgreSQL/.env
 BackendPostgreSQL/*.env
 **/.env
+
+BackendPostgreSQL/generated/prisma
