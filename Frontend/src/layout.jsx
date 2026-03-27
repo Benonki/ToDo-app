@@ -19,9 +19,6 @@ const Layout = () => {
     return (
         <div className="layout">
             <nav className="navbar">
-                <div className="nav-brand">
-                    <Link to="/">ToDo App</Link>
-                </div>
                 <ul className="nav-menu">
                     <li className="nav-item">
                         <Link to="/" className={`nav-link ${isActive("/")}`}>
