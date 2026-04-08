@@ -94,7 +94,7 @@ function Register() {
           </button>
         </form>
 
-        {error && <p className="auth-error">{error}</p>}
+        {error && <div className="auth-error">{error}</div>}
 
         <p className="auth-link">
           Masz już konto?{" "}

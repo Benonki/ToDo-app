@@ -85,3 +85,19 @@
 .auth-link-text:hover {
     color: #1976d2;
 }
+
+.form-group input.input-error {
+    border-color: #dc3545;
+    background-color: #fff8f8;
+}
+
+.auth-error {
+    background-color: #f8d7da;
+    border: 1px solid #f5c6cb;
+    border-radius: 8px;
+    padding: 0.75rem;
+    margin: 1rem 0 0 0;
+    color: #721c24;
+    font-size: 0.9rem;
+    text-align: center;
+}
