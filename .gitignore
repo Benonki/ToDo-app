@@ -34,3 +34,5 @@ BackendPostgreSQL/*.env
 **/.env
 
 BackendPostgreSQL/generated/prisma
+BackendMongo/serviceAccountKey.json
+BackendPostgreSQL/serviceAccountKey.json
