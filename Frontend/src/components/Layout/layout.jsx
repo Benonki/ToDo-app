@@ -1,6 +1,6 @@
 import { Outlet, Link, useLocation, useNavigate } from "react-router-dom";
 import { FiLogOut } from "react-icons/fi";
-import { logoutUser } from "./firebase/auth";
+import { logoutUser } from "../../firebase/auth";
 import "./layout.css";
 
 const Layout = () => {

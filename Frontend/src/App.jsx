@@ -3,8 +3,8 @@ import Login from "./screens/Login";
 import Register from "./screens/Register";
 import Home from "./screens/Home";
 import Profile from "./screens/Profile";
-import PrivateRoute from "./components/PrivateRoute";
-import Layout from "./layout";
+import PrivateRoute from "./components/PrivateRoute/PrivateRoute";
+import Layout from "./components/Layout/layout";
 
 function App() {
   return (
