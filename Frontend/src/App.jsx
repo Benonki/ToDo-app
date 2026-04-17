@@ -5,7 +5,6 @@ import Home from "./screens/Home";
 import Profile from "./screens/Profile";
 import PrivateRoute from "./components/PrivateRoute";
 import Layout from "./layout";
-import "./App.css";
 
 function App() {
   return (
