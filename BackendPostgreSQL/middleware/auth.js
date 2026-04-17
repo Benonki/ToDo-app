@@ -1,6 +1,6 @@
-import admin from "../lib/firebaseAdmin.js";
+const admin = require("../lib/firebaseAdmin");
 
-export async function verifyFirebaseToken(req, res, next) {
+async function verifyFirebaseToken(req, res, next) {
   try {
     const authHeader = req.headers.authorization;
 
@@ -17,3 +17,5 @@ export async function verifyFirebaseToken(req, res, next) {
     return res.status(401).json({ message: "Nieprawidłowy token" });
   }
 }
+
+module.exports = verifyFirebaseToken;
