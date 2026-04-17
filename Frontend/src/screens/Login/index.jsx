@@ -9,10 +9,12 @@ function Login() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
+    setIsLoading(true);
 
     try {
       await loginUser(email, password);
@@ -24,6 +26,8 @@ function Login() {
       navigate("/");
     } catch (err) {
       setError(err.message || "Błąd logowania");
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -42,6 +46,7 @@ function Login() {
               onChange={(e) => setEmail(e.target.value)}
               placeholder="Wprowadź email"
               required
+              disabled={isLoading}
             />
           </div>
 
@@ -54,11 +59,16 @@ function Login() {
               onChange={(e) => setPassword(e.target.value)}
               placeholder="Wprowadź hasło"
               required
+              disabled={isLoading}
             />
           </div>
 
-          <button type="submit" className="auth-btn">
-            Zaloguj się
+            <button type="submit" className="auth-btn" disabled={isLoading}>
+              {isLoading ? (
+                  <div className="spinner"></div>
+              ) : (
+                  "Zaloguj się"
+              )}
           </button>
         </form>
 
