@@ -1,4 +1,4 @@
-import {useCallback, useRef, useState} from "react";
+import {useCallback, useRef, useState, useMemo} from "react";
 import TaskForm from "../TaskForm/TaskForm.jsx";
 import "./DayTimeline.css";
 
@@ -48,15 +48,94 @@ export default function DayTimeline({ date, tasks, onAddTask, onUpdateTask, onDe
         };
     };
 
+    const calculateTaskColumns = useCallback((tasks) => {
+        if (!tasks || tasks.length === 0) return { columns: [], taskPositions: {} };
+
+        const sortedTasks = [...tasks].sort((a, b) =>
+            new Date(a.startTime) - new Date(b.startTime)
+        );
+
+        const columns = [];
+        const taskPositions = {};
+
+        sortedTasks.forEach(task => {
+            const taskStart = new Date(task.startTime).getTime();
+            const taskEnd = new Date(task.endTime).getTime();
+
+            let placed = false;
+
+            for (let col = 0; col < columns.length; col++) {
+                const lastTaskInColumn = columns[col][columns[col].length - 1];
+                const lastTaskEnd = new Date(lastTaskInColumn.endTime).getTime();
+
+                if (taskStart >= lastTaskEnd) {
+                    columns[col].push(task);
+                    taskPositions[task._id] = { column: col, totalColumns: columns.length };
+                    placed = true;
+                    break;
+                }
+            }
+
+            if (!placed) {
+                let overlapsWithAll = true;
+
+                for (let col = 0; col < columns.length; col++) {
+                    const hasOverlap = columns[col].some(existingTask => {
+                        const existingStart = new Date(existingTask.startTime).getTime();
+                        const existingEnd = new Date(existingTask.endTime).getTime();
+                        return taskStart < existingEnd && taskEnd > existingStart;
+                    });
+
+                    if (!hasOverlap) {
+                        columns[col].push(task);
+                        taskPositions[task._id] = { column: col, totalColumns: columns.length };
+                        placed = true;
+                        overlapsWithAll = false;
+                        break;
+                    }
+                }
+
+                if (overlapsWithAll || !placed) {
+                    columns.push([task]);
+
+                    Object.keys(taskPositions).forEach(taskId => {
+                        taskPositions[taskId].totalColumns = columns.length;
+                    });
+
+                    taskPositions[task._id] = {
+                        column: columns.length - 1,
+                        totalColumns: columns.length
+                    };
+                }
+            }
+        });
+
+        return { columns, taskPositions };
+    }, []);
+
+    const { taskPositions } = useMemo(() =>
+            calculateTaskColumns(tasks),
+        [tasks, calculateTaskColumns]
+    );
+
     const getTaskStyle = (task) => {
         const startHour = new Date(task.startTime).getHours() + new Date(task.startTime).getMinutes() / 60;
         const endHour = new Date(task.endTime).getHours() + new Date(task.endTime).getMinutes() / 60;
         const duration = endHour - startHour;
 
+        const position = taskPositions[task._id];
+        const totalColumns = position ? position.totalColumns : 1;
+        const column = position ? position.column : 0;
+
+        const columnWidth = 100 / totalColumns;
+        const leftOffset = column * columnWidth;
+
         return {
             top: `${(startHour / 24) * 100}%`,
-            height: `${(duration / 24) * 100}%`,
-            backgroundColor: task.color || '#4A90E2'
+            height: `${Math.max(duration / 24 * 100, 0.5)}%`,
+            backgroundColor: task.color || '#4A90E2',
+            left: `${leftOffset + 0.5}%`,
+            width: `${columnWidth - 1}%`
         };
     };
 
