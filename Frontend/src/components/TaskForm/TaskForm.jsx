@@ -17,7 +17,7 @@ export default function TaskForm({ onSubmit, onCancel, initialData = null, prede
 
     return (
         <form className="task-form" onSubmit={handleSubmit}>
-            <h3>{initialData ? 'Edytuj zadanie' : 'Nowe zadanie'}</h3>
+            <h3>{initialData?.title ? 'Edytuj zadanie' : 'Nowe zadanie'}</h3>
 
             <div className="form-group">
                 <label>Od:</label>
@@ -77,7 +77,7 @@ export default function TaskForm({ onSubmit, onCancel, initialData = null, prede
 
             <div className="form-actions">
                 <button type="submit" className="btn-save">
-                    {initialData ? 'Zapisz zmiany' : 'Dodaj zadanie'}
+                    {initialData?.title ? 'Zapisz zmiany' : 'Dodaj zadanie'}
                 </button>
                 <button type="button" className="btn-cancel" onClick={onCancel}>
                     Anuluj

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import {useCallback, useRef, useState} from "react";
 import TaskForm from "../TaskForm/TaskForm.jsx";
 import "./DayTimeline.css";
 
@@ -13,7 +13,40 @@ const PREDEFINED_COLORS = [
 export default function DayTimeline({ date, tasks, onAddTask, onUpdateTask, onDeleteTask }) {
     const [showForm, setShowForm] = useState(false);
     const [editingTask, setEditingTask] = useState(null);
+    const [selectionMode, setSelectionMode] = useState(false);
+    const [selectionStart, setSelectionStart] = useState(null);
+    const [selectionEnd, setSelectionEnd] = useState(null);
+    const [isDragging, setIsDragging] = useState(false);
+    const [prefilledTime, setPrefilledTime] = useState(null);
+    const timelineRef = useRef(null);
     const hours = Array.from({ length: 24 }, (_, i) => i);
+
+    const getTimeFromYPosition = useCallback((yPosition) => {
+        if (!timelineRef.current) return 0;
+        const rect = timelineRef.current.getBoundingClientRect();
+        const relativeY = yPosition - rect.top;
+        const totalHeight = rect.height;
+        const hoursFloat = (relativeY / totalHeight) * 24;
+        const hours = Math.floor(hoursFloat);
+        const minutes = Math.round((hoursFloat - hours) * 60);
+        return { hours: Math.max(0, Math.min(23, hours)), minutes: Math.min(59, minutes) };
+    }, []);
+
+    const formatTimeNumber = (hours, minutes) => {
+        const roundedMinutes = Math.round(minutes / 15) * 15;
+        let finalHours = hours;
+        let finalMinutes = roundedMinutes;
+
+        if (finalMinutes >= 60) {
+            finalHours += 1;
+            finalMinutes = 0;
+        }
+
+        return {
+            hours: Math.min(23, finalHours),
+            minutes: finalMinutes
+        };
+    };
 
     const getTaskStyle = (task) => {
         const startHour = new Date(task.startTime).getHours() + new Date(task.startTime).getMinutes() / 60;
@@ -24,6 +57,72 @@ export default function DayTimeline({ date, tasks, onAddTask, onUpdateTask, onDe
             top: `${(startHour / 24) * 100}%`,
             height: `${(duration / 24) * 100}%`,
             backgroundColor: task.color || '#4A90E2'
+        };
+    };
+
+    const handleMouseDown = (e) => {
+        if (e.target.closest('.task-block')) return;
+
+        setIsDragging(true);
+        setSelectionMode(true);
+        const { hours, minutes } = getTimeFromYPosition(e.clientY);
+        const rounded = formatTimeNumber(hours, minutes);
+        const startTime = { hours: rounded.hours, minutes: rounded.minutes };
+        setSelectionStart(startTime);
+        setSelectionEnd(startTime);
+    };
+
+    const handleMouseMove = (e) => {
+        if (!isDragging) return;
+
+        const { hours, minutes } = getTimeFromYPosition(e.clientY);
+        const rounded = formatTimeNumber(hours, minutes);
+        setSelectionEnd({ hours: rounded.hours, minutes: rounded.minutes });
+    };
+
+    const handleMouseUp = () => {
+        if (!isDragging) return;
+        setIsDragging(false);
+
+        if (selectionStart && selectionEnd) {
+            const startMinutes = selectionStart.hours * 60 + selectionStart.minutes;
+            const endMinutes = selectionEnd.hours * 60 + selectionEnd.minutes;
+
+            if (Math.abs(endMinutes - startMinutes) >= 15) {
+                const [finalStart, finalEnd] = startMinutes <= endMinutes
+                    ? [selectionStart, selectionEnd]
+                    : [selectionEnd, selectionStart];
+
+                setPrefilledTime({
+                    startTime: `${finalStart.hours.toString().padStart(2, '0')}:${finalStart.minutes.toString().padStart(2, '0')}`,
+                    endTime: `${finalEnd.hours.toString().padStart(2, '0')}:${finalEnd.minutes.toString().padStart(2, '0')}`
+                });
+
+                setEditingTask(null);
+                setShowForm(true);
+            }
+        }
+
+        setTimeout(() => {
+            setSelectionMode(false);
+            setSelectionStart(null);
+            setSelectionEnd(null);
+        }, 100);
+    };
+
+    const getSelectionStyle = () => {
+        if (!selectionMode || !selectionStart || !selectionEnd) return null;
+
+        const startMinutes = selectionStart.hours * 60 + selectionStart.minutes;
+        const endMinutes = selectionEnd.hours * 60 + selectionEnd.minutes;
+
+        const topPercent = Math.min(startMinutes, endMinutes) / (24 * 60) * 100;
+        const heightPercent = Math.abs(endMinutes - startMinutes) / (24 * 60) * 100;
+
+        return {
+            top: `${topPercent}%`,
+            height: `${heightPercent}%`,
+            display: 'block'
         };
     };
 
@@ -55,10 +154,12 @@ export default function DayTimeline({ date, tasks, onAddTask, onUpdateTask, onDe
 
         setShowForm(false);
         setEditingTask(null);
+        setPrefilledTime(null);
     };
 
     const handleTaskClick = (task) => {
         setEditingTask(task);
+        setPrefilledTime(null);
         setShowForm(true);
     };
 
@@ -67,6 +168,12 @@ export default function DayTimeline({ date, tasks, onAddTask, onUpdateTask, onDe
         if (window.confirm('Czy na pewno chcesz usunąć to zadanie?')) {
             await onDeleteTask(date.toISOString(), taskId);
         }
+    };
+
+    const handleAddButtonClick = () => {
+        setEditingTask(null);
+        setPrefilledTime(null);
+        setShowForm(!showForm);
     };
 
     return (
@@ -81,10 +188,7 @@ export default function DayTimeline({ date, tasks, onAddTask, onUpdateTask, onDe
                 </h3>
                 <button
                     className="btn-add"
-                    onClick={() => {
-                        setEditingTask(null);
-                        setShowForm(!showForm);
-                    }}
+                    onClick={handleAddButtonClick}
                 >
                     {showForm ? 'Zamknij' : '+ Dodaj zadanie'}
                 </button>
@@ -96,9 +200,10 @@ export default function DayTimeline({ date, tasks, onAddTask, onUpdateTask, onDe
                     onCancel={() => {
                         setShowForm(false);
                         setEditingTask(null);
+                        setPrefilledTime(null);
                     }}
                     predefinedColors={PREDEFINED_COLORS}
-                    initialData={editingTask ? {
+                    initialData={prefilledTime || (editingTask ? {
                         startTime: new Date(editingTask.startTime).toLocaleTimeString('pl-PL', {
                             hour: '2-digit',
                             minute: '2-digit',
@@ -112,11 +217,23 @@ export default function DayTimeline({ date, tasks, onAddTask, onUpdateTask, onDe
                         title: editingTask.title,
                         description: editingTask.description,
                         color: editingTask.color
-                    } : null}
+                    } : null)}
                 />
             )}
 
-            <div className="timeline-container">
+            <div
+                className="timeline-container"
+                ref={timelineRef}
+                onMouseDown={handleMouseDown}
+                onMouseMove={handleMouseMove}
+                onMouseUp={handleMouseUp}
+                onMouseLeave={() => {
+                    if (isDragging) {
+                        setIsDragging(false);
+                        setSelectionMode(false);
+                    }
+                }}
+            >
                 <div className="time-labels">
                     {hours.map(hour => (
                         <div key={hour} className="hour-label">
@@ -129,6 +246,8 @@ export default function DayTimeline({ date, tasks, onAddTask, onUpdateTask, onDe
                     {hours.map(hour => (
                         <div key={hour} className="hour-slot" />
                     ))}
+
+                    <div className="selection-overlay" style={getSelectionStyle()} />
 
                     <div className="tasks-overlay">
                         {tasks.map((task, index) => (
