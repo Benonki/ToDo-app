@@ -8,11 +8,10 @@ class TaskService {
             throw new Error('Użytkownik nie znaleziony');
         }
 
-        const startOfDay = new Date(date);
-        startOfDay.setHours(0, 0, 0, 0);
+        const [year, month, day] = date.split('-').map(Number);
 
-        const endOfDay = new Date(date);
-        endOfDay.setHours(23, 59, 59, 999);
+        const startOfDay = new Date(Date.UTC(year, month - 1, day, 0, 0, 0));
+        const endOfDay = new Date(Date.UTC(year, month - 1, day, 23, 59, 59, 999));
 
         const taskDoc = await Task.findOne({
             userId: user._id,
@@ -22,7 +21,15 @@ class TaskService {
             }
         });
 
-        return taskDoc ? taskDoc.tasks : [];
+        if (taskDoc && taskDoc.tasks) {
+            return taskDoc.tasks.map(task => ({
+                ...task.toObject(),
+                startTime: task.startTime,
+                endTime: task.endTime
+            }));
+        }
+
+        return [];
     }
 
     async createTask(uid, taskData) {
@@ -33,8 +40,9 @@ class TaskService {
 
         const { date, startTime, endTime, title, description, color } = taskData;
 
-        const taskDate = new Date(date);
-        taskDate.setHours(0, 0, 0, 0);
+        const [year, month, day] = date.split('-').map(Number);
+
+        const taskDate = new Date(Date.UTC(year, month - 1, day, 12, 0, 0));
 
         const newTask = {
             startTime: new Date(startTime),
@@ -113,8 +121,8 @@ class TaskService {
             throw new Error('Użytkownik nie znaleziony');
         }
 
-        const taskDate = new Date(date);
-        taskDate.setHours(0, 0, 0, 0);
+        const [year, month, day] = date.split('-').map(Number);
+        const taskDate = new Date(Date.UTC(year, month - 1, day, 12, 0, 0));
 
         const result = await Task.updateOne(
             {

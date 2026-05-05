@@ -216,8 +216,10 @@ export default function DayTimeline({ date, tasks, onAddTask, onUpdateTask, onDe
         const startTime = new Date(year, month, day, startHours, startMinutes);
         const endTime = new Date(year, month, day, endHours, endMinutes);
 
+        const dateString = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+
         const taskData = {
-            date: new Date(year, month, day).toISOString(),
+            date: dateString,
             startTime: startTime.toISOString(),
             endTime: endTime.toISOString(),
             title: formData.title,

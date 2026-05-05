@@ -18,7 +18,12 @@ export default function Home() {
     const loadTasks = async (date) => {
         setLoading(true);
         try {
-            const data = await getTasks(date.toISOString().split('T')[0]);
+            const year = date.getFullYear();
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const day = String(date.getDate()).padStart(2, '0');
+            const dateString = `${year}-${month}-${day}`;
+
+            const data = await getTasks(dateString);
             setTasks(data.tasks || []);
         } catch (error) {
             console.error('Error loading tasks:', error);
