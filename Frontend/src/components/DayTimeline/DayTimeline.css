@@ -41,7 +41,7 @@
     display: flex;
     position: relative;
     height: 600px;
-    overflow-y: auto;
+    overflow: hidden;
     border: 1px solid #e0e0e0;
     border-radius: 8px;
     cursor: pointer;
