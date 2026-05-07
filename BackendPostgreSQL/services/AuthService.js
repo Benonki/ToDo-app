@@ -1,6 +1,6 @@
 class AuthService {
-  constructor(prisma) {
-    this.prisma = prisma;
+  constructor(userRepository) {
+    this.userRepository = userRepository;
   }
 
   async syncUser(firebaseUser) {
@@ -10,25 +10,18 @@ class AuthService {
       throw new Error("Brak danych użytkownika z Firebase");
     }
 
-    let user = await this.prisma.user.findUnique({
-      where: { firebaseUid: uid },
-    });
+    let user = await this.userRepository.findByFirebaseUid(uid);
 
     if (!user) {
-      user = await this.prisma.user.create({
-        data: {
-          firebaseUid: uid,
-          email,
-          displayName: name || null,
-        },
+      user = await this.userRepository.create({
+        firebaseUid: uid,
+        email,
+        displayName: name || null,
       });
     } else {
-      user = await this.prisma.user.update({
-        where: { firebaseUid: uid },
-        data: {
-          email,
-          displayName: name || user.displayName,
-        },
+      user = await this.userRepository.updateByFirebaseUid(uid, {
+        email,
+        displayName: name || user.displayName,
       });
     }
 
@@ -36,9 +29,7 @@ class AuthService {
   }
 
   async getMe(firebaseUser) {
-    const user = await this.prisma.user.findUnique({
-      where: { firebaseUid: firebaseUser.uid },
-    });
+    const user = await this.userRepository.findByFirebaseUid(firebaseUser.uid);
 
     if (!user) {
       throw new Error("Nie znaleziono użytkownika");
