@@ -4,6 +4,10 @@ const userSchema = new mongoose.Schema({
   firebaseUid: { type: String, required: true, unique: true },
   email: { type: String, required: true },
   displayName: { type: String },
+  info: {
+    firstName: { type: String,  default: 'Imie...' },
+    lastName: { type: String,  default: 'Nazwisko...' }
+  }
 }, { timestamps: true });
 
 class UserModel {

@@ -5,6 +5,7 @@ const morgan = require('morgan');
 
 const authRoutes = require('./routes/authRoutes');
 const taskRoutes = require('./routes/taskRoutes');
+const userRoutes = require('./routes/userRoutes');
 
 class App {
   constructor() {
@@ -23,6 +24,7 @@ class App {
   initializeRoutes() {
     this.app.use('/auth', authRoutes);
     this.app.use('/tasks', taskRoutes);
+    this.app.use('/users', userRoutes);
   }
 
   initializeErrorHandling() {

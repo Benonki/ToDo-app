@@ -1,6 +1,6 @@
 const User = require('../models/User');
 
-class UserService {
+class AuthService {
     async syncUser({ uid, email, name }) {
         let user = await User.findOne({ firebaseUid: uid });
 
@@ -9,21 +9,28 @@ class UserService {
                 firebaseUid: uid,
                 email,
                 displayName: name || null,
+                info: {
+                    firstName: 'Imie...',
+                    lastName: 'Nazwisko...'
+                }
             });
         } else {
             user = await User.findOneAndUpdate(
                 { firebaseUid: uid },
-                { email, displayName: name || user.displayName },
+                {
+                    email,
+                    displayName: name || user.displayName,
+                    info: {
+                        firstName: user.info?.firstName || 'Imie...',
+                        lastName: user.info?.lastName || 'Nazwisko...'
+                    }
+                },
                 { new: true }
             );
         }
 
         return user;
     }
-
-    async findUserByUid(uid) {
-        return await User.findOne({ firebaseUid: uid });
-    }
 }
 
-module.exports = UserService;
+module.exports = AuthService;
