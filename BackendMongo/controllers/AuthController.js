@@ -1,8 +1,8 @@
-const UserService = require('../services/AuthService');
+const AuthService = require('../services/AuthService');
 
 class AuthController {
     constructor() {
-        this.userService = new UserService();
+        this.authService = new AuthService();
     }
 
     async syncUser(req, res) {
@@ -15,7 +15,7 @@ class AuthController {
                 });
             }
 
-            const user = await this.userService.syncUser({ uid, email, name });
+            const user = await this.authService.syncUser({ uid, email, name });
 
             return res.json({ user });
         } catch (error) {
@@ -30,7 +30,7 @@ class AuthController {
         try {
             const { uid } = req.firebaseUser;
 
-            const user = await this.userService.findUserByUid(uid);
+            const user = await this.authService.findUserByUid(uid);
 
             if (!user) {
                 return res.status(404).json({
