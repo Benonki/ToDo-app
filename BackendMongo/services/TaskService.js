@@ -40,13 +40,27 @@ class TaskService {
     }
 
     parseDateParts(date) {
-        const [year, month, day] = String(date).split('-').map(Number);
+        const rawDate = String(date || '').trim();
 
-        if (!year || !month || !day) {
-            throw new Error('Nieprawidłowy format daty. Użyj YYYY-MM-DD.');
+        const onlyDateMatch = rawDate.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+        if (onlyDateMatch) {
+            return {
+                year: Number(onlyDateMatch[1]),
+                month: Number(onlyDateMatch[2]),
+                day: Number(onlyDateMatch[3])
+            };
         }
 
-        return { year, month, day };
+        const parsedDate = new Date(rawDate);
+        if (!isNaN(parsedDate.getTime())) {
+            return {
+                year: parsedDate.getUTCFullYear(),
+                month: parsedDate.getUTCMonth() + 1,
+                day: parsedDate.getUTCDate()
+            };
+        }
+
+        throw new Error('Nieprawidłowy format daty. Użyj YYYY-MM-DD albo pełnej daty ISO.');
     }
 
     getStartAndEndOfDay(date) {
