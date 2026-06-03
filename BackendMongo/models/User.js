@@ -1,4 +1,5 @@
 const mongoose = require('mongoose');
+const DatabaseQueryTimer = require('../lib/DatabaseQueryTimer');
 
 const userSchema = new mongoose.Schema({
   firebaseUid: { type: String, required: true, unique: true },
@@ -16,15 +17,24 @@ class UserModel {
   }
 
   create(data) {
-    return this.model.create(data);
+    return DatabaseQueryTimer.measure(
+      'User.create',
+      () => this.model.create(data)
+    );
   }
 
   findOne(filter) {
-    return this.model.findOne(filter);
+    return DatabaseQueryTimer.measure(
+      'User.findOne',
+      () => this.model.findOne(filter).exec()
+    );
   }
 
   findOneAndUpdate(filter, update, options) {
-    return this.model.findOneAndUpdate(filter, update, options);
+    return DatabaseQueryTimer.measure(
+      'User.findOneAndUpdate',
+      () => this.model.findOneAndUpdate(filter, update, options).exec()
+    );
   }
 }
 

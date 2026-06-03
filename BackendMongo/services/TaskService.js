@@ -63,7 +63,7 @@ class TaskService {
 
         if (taskDoc) {
             taskDoc.tasks.push(newTask);
-            await taskDoc.save();
+            await Task.saveDocument(taskDoc);
         } else {
             taskDoc = await Task.create({
                 userId: user._id,
