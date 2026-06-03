@@ -1,0 +1,91 @@
+1. Model danych
+
+Relacyjne bazy danych:
+-przechowują dane w tabelach
+-tabele składają się z wierszy i kolumn
+-dane są zwykle rozbite na kilka tabel
+
+Składy danych:
+-przechowują dane jako dokumenty
+-dokumenty są podobne do JSON
+-w MongoDB dane są w kolekcjach a pojedynczy rekord to dokument
+
+2. Obsługa JSON
+
+Relacyjne bazy danych:
+-PostgreSQL pozwala przechowywać dane JSON przez typy JSON i JSONB (binarna postać JSON)
+
+Składy danych:
+-MongoDB od początku jest zrobione pod dane dokumentowe
+-dokumenty są zapisane jako BSON (podobny do JSON ale w postaci binarnej)
+
+3. Schemat danych
+
+Relacyjne bazy danych:
+-najczęściej trzeba wcześniej ustalić strukturę bazy
+-trzeba określić tabele kolumny typy danych i relacje
+-większa kontrola nad danymi
+
+Składy danych:
+-struktura jest bardziej elastyczna
+-dokumenty w jednej kolekcji mogą wyglądać trochę inaczej
+-wygodne gdy dane mogą się zmieniać w trakcie rozwoju aplikacji
+
+4. Relacje
+
+Relacyjne bazy danych:
+-relacje robi się przez klucze główne, klucze obce i JOIN
+-przy relacji wiele do wielu tworzy się tabelę pośredniczącą
+-baza pilnuje żeby powiązania były poprawne
+
+Składy danych:
+-przy relacji jeden do wielu można trzymać dane razem w jednym dokumencie (zagnieżdżenie)
+-przy relacji wiele do wielu zwykle trzyma się id innych dokumentów (referencja)
+-aplikacja musi bardziej pilnować czy powiązania są poprawne
+
+5. Normalizacja i denormalizacja
+
+Relacyjne bazy danych:
+-dane są częściej normalizowane, czyli rozdzielane na kilka tabel żeby nie powtarzać tych samych informacji
+-potem trzeba łączyć dane przez JOIN
+
+Składy danych:
+-dane częściej trzyma się razem w jednym dokumencie, co może przyspieszyć odczyt
+-jeśli te same dane są w kilku miejscach to trudniej je później aktualizować
+
+6. Zapytania
+
+Relacyjne bazy danych:
+-PostgreSQL używa SQL
+-dobrze nadaje się do bardziej złożonych zapytań i łączenia danych z wielu tabel
+-można też robić zapytania po danych zapisanych jako JSON
+
+Składy danych:
+-MongoDB ma zapytania oparte na strukturze danych
+-najlepiej działa gdy dane są zapisane tak jak aplikacja będzie je później odczytywać
+
+7. Spójność danych
+
+Relacyjne bazy danych:
+-lepiej pilnują spójności danych
+-dobrze sprawdzają się gdy ważne są poprawne relacje i transakcje
+
+Składy danych:
+-MongoDB też obsługuje transakcje ale przy wielu powiązanych dokumentach więcej rzeczy trzeba kontrolować samemu w aplikacji
+
+8. Wydajność
+
+Relacyjne bazy danych:
+-dobrze działają przy danych uporządkowanych i złożonych relacjach
+-są dobre do zapytań gdzie trzeba łączyć dużo tabel
+
+Składy danych:
+-wygodniejsze gdy aplikacja często odczytuje cały dokument
+-dobrze sprawdza się zasada, że dane używane razem są zapisane razem
+
+9. Podsumowanie
+
+-obie bazy mogą przechowywać dane JSON
+-PostgreSQL łączy zwykłe tabele z obsługą JSON
+-MongoDB jest od początku bazą dokumentową
+-główna różnica jest taka że PostgreSQL lepiej radzi sobie z relacjami, a MongoDB lepiej pasuje do danych trzymanych jako całe dokumenty
