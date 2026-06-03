@@ -1,3 +1,5 @@
+const ProfileInfo = require("./ProfileInfo");
+
 class AuthService {
   constructor(userRepository) {
     this.userRepository = userRepository;
@@ -17,11 +19,13 @@ class AuthService {
         firebaseUid: uid,
         email,
         displayName: name || null,
+        info: ProfileInfo.getDefaults(),
       });
     } else {
       user = await this.userRepository.updateByFirebaseUid(uid, {
         email,
         displayName: name || user.displayName,
+        info: new ProfileInfo(user.info).withDefaults(),
       });
     }
 

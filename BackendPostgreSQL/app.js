@@ -9,6 +9,9 @@ const TaskRepository = require("./repositories/TaskRepository");
 const AuthService = require("./services/AuthService");
 const AuthController = require("./controllers/AuthController");
 const createAuthRoutes = require("./routes/authRoutes");
+const UserService = require("./services/UserService");
+const UserController = require("./controllers/UserController");
+const createUserRoutes = require("./routes/userRoutes");
 const TaskService = require("./services/TaskService");
 const TaskController = require("./controllers/TaskController");
 const createTaskRoutes = require("./routes/taskRoutes");
@@ -32,10 +35,13 @@ const userRepository = new UserRepository(prisma);
 const taskRepository = new TaskRepository(prisma);
 const authService = new AuthService(userRepository);
 const authController = new AuthController(authService);
+const userService = new UserService(userRepository);
+const userController = new UserController(userService);
 const taskService = new TaskService(userRepository, taskRepository);
 const taskController = new TaskController(taskService);
 
 app.use("/auth", createAuthRoutes(authController));
+app.use("/users", createUserRoutes(userController));
 app.use("/tasks", createTaskRoutes(taskController));
 
 app.listen(PORT, () => {
