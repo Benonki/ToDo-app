@@ -1,19 +1,130 @@
 const Task = require('../models/Task');
 const User = require('../models/User');
 
+const TASK_STORAGE_MODES = {
+    DAILY: 'daily',
+    REFERENCED: 'referenced'
+};
+
 class TaskService {
-    async getTasksByDate(uid, date) {
+    constructor(storageMode = process.env.TASK_STORAGE_MODE) {
+        this.storageMode = this.normalizeStorageMode(storageMode);
+    }
+
+    normalizeStorageMode(storageMode) {
+        if (!storageMode) {
+            return TASK_STORAGE_MODES.DAILY;
+        }
+
+        const normalized = storageMode.toLowerCase().trim();
+
+        if (normalized === 'embedded') {
+            return TASK_STORAGE_MODES.DAILY;
+        }
+
+        if (normalized === TASK_STORAGE_MODES.DAILY || normalized === TASK_STORAGE_MODES.REFERENCED) {
+            return normalized;
+        }
+
+        throw new Error(`Nieprawidłowy TASK_STORAGE_MODE: ${storageMode}. Użyj daily albo referenced.`);
+    }
+
+    async getUserByFirebaseUid(uid) {
         const user = await User.findOne({ firebaseUid: uid });
+
         if (!user) {
             throw new Error('Użytkownik nie znaleziony');
         }
 
-        const [year, month, day] = date.split('-').map(Number);
+        return user;
+    }
 
-        const startOfDay = new Date(Date.UTC(year, month - 1, day, 0, 0, 0));
-        const endOfDay = new Date(Date.UTC(year, month - 1, day, 23, 59, 59, 999));
+    parseDateParts(date) {
+        const [year, month, day] = String(date).split('-').map(Number);
 
-        const taskDoc = await Task.findOne({
+        if (!year || !month || !day) {
+            throw new Error('Nieprawidłowy format daty. Użyj YYYY-MM-DD.');
+        }
+
+        return { year, month, day };
+    }
+
+    getStartAndEndOfDay(date) {
+        const { year, month, day } = this.parseDateParts(date);
+
+        return {
+            startOfDay: new Date(Date.UTC(year, month - 1, day, 0, 0, 0, 0)),
+            endOfDay: new Date(Date.UTC(year, month - 1, day, 23, 59, 59, 999))
+        };
+    }
+
+    getTaskDate(date) {
+        const { year, month, day } = this.parseDateParts(date);
+        return new Date(Date.UTC(year, month - 1, day, 12, 0, 0, 0));
+    }
+
+    buildTaskPayload(taskData) {
+        const newTask = {
+            startTime: new Date(taskData.startTime),
+            endTime: new Date(taskData.endTime),
+            title: taskData.title || '',
+            description: taskData.description || '',
+            color: taskData.color || '#4A90E2'
+        };
+
+        if (isNaN(newTask.startTime.getTime()) || isNaN(newTask.endTime.getTime())) {
+            throw new Error('Nieprawidłowy format daty');
+        }
+
+        return newTask;
+    }
+
+    buildUpdateFields(updateData, useArrayPrefix = false) {
+        const prefix = useArrayPrefix ? 'tasks.$.' : '';
+        const updateFields = {};
+
+        if (updateData.date) {
+            updateFields[`${prefix}date`] = this.getTaskDate(updateData.date);
+        }
+        if (updateData.startTime) {
+            updateFields[`${prefix}startTime`] = new Date(updateData.startTime);
+        }
+        if (updateData.endTime) {
+            updateFields[`${prefix}endTime`] = new Date(updateData.endTime);
+        }
+        if (updateData.title !== undefined) {
+            updateFields[`${prefix}title`] = updateData.title;
+        }
+        if (updateData.description !== undefined) {
+            updateFields[`${prefix}description`] = updateData.description;
+        }
+        if (updateData.color !== undefined) {
+            updateFields[`${prefix}color`] = updateData.color;
+        }
+
+        return updateFields;
+    }
+
+    async getTasksByDate(uid, date) {
+        const user = await this.getUserByFirebaseUid(uid);
+        const { startOfDay, endOfDay } = this.getStartAndEndOfDay(date);
+
+        if (this.storageMode === TASK_STORAGE_MODES.REFERENCED) {
+            const tasks = await Task.referenced.find(
+                {
+                    userId: user._id,
+                    date: {
+                        $gte: startOfDay,
+                        $lte: endOfDay
+                    }
+                },
+                { sort: { startTime: 1 } }
+            );
+
+            return tasks.map(task => task.toObject());
+        }
+
+        const taskDoc = await Task.daily.findOne({
             userId: user._id,
             date: {
                 $gte: startOfDay,
@@ -21,51 +132,39 @@ class TaskService {
             }
         });
 
-        if (taskDoc && taskDoc.tasks) {
-            return taskDoc.tasks.map(task => ({
-                ...task.toObject(),
-                startTime: task.startTime,
-                endTime: task.endTime
-            }));
+        if (!taskDoc || !taskDoc.tasks) {
+            return [];
         }
 
-        return [];
+        return taskDoc.tasks
+            .map(task => task.toObject())
+            .sort((a, b) => new Date(a.startTime) - new Date(b.startTime));
     }
 
     async createTask(uid, taskData) {
-        const user = await User.findOne({ firebaseUid: uid });
-        if (!user) {
-            throw new Error('Użytkownik nie znaleziony');
+        const user = await this.getUserByFirebaseUid(uid);
+        const { date } = taskData;
+        const taskDate = this.getTaskDate(date);
+        const newTask = this.buildTaskPayload(taskData);
+
+        if (this.storageMode === TASK_STORAGE_MODES.REFERENCED) {
+            return Task.referenced.create({
+                userId: user._id,
+                date: taskDate,
+                ...newTask
+            });
         }
 
-        const { date, startTime, endTime, title, description, color } = taskData;
-
-        const [year, month, day] = date.split('-').map(Number);
-
-        const taskDate = new Date(Date.UTC(year, month - 1, day, 12, 0, 0));
-
-        const newTask = {
-            startTime: new Date(startTime),
-            endTime: new Date(endTime),
-            title: title || '',
-            description: description || '',
-            color: color || '#4A90E2'
-        };
-
-        if (isNaN(newTask.startTime.getTime()) || isNaN(newTask.endTime.getTime())) {
-            throw new Error('Nieprawidłowy format daty');
-        }
-
-        let taskDoc = await Task.findOne({
+        let taskDoc = await Task.daily.findOne({
             userId: user._id,
             date: taskDate
         });
 
         if (taskDoc) {
             taskDoc.tasks.push(newTask);
-            await Task.saveDocument(taskDoc);
+            await Task.daily.saveDocument(taskDoc);
         } else {
-            taskDoc = await Task.create({
+            taskDoc = await Task.daily.create({
                 userId: user._id,
                 date: taskDate,
                 tasks: [newTask]
@@ -76,55 +175,57 @@ class TaskService {
     }
 
     async updateTask(uid, taskId, updateData) {
-        const user = await User.findOne({ firebaseUid: uid });
-        if (!user) {
-            throw new Error('Użytkownik nie znaleziony');
+        const user = await this.getUserByFirebaseUid(uid);
+
+        if (this.storageMode === TASK_STORAGE_MODES.REFERENCED) {
+            const updateFields = this.buildUpdateFields(updateData, false);
+
+            const task = await Task.referenced.findOneAndUpdate(
+                {
+                    _id: taskId,
+                    userId: user._id
+                },
+                { $set: updateFields },
+                { new: true }
+            );
+
+            return task;
         }
 
-        const updateFields = {};
+        const updateFields = this.buildUpdateFields(updateData, true);
+        delete updateFields['tasks.$.date'];
 
-        if (updateData.startTime) {
-            updateFields['tasks.$.startTime'] = new Date(updateData.startTime);
-        }
-        if (updateData.endTime) {
-            updateFields['tasks.$.endTime'] = new Date(updateData.endTime);
-        }
-        if (updateData.title !== undefined) {
-            updateFields['tasks.$.title'] = updateData.title;
-        }
-        if (updateData.description !== undefined) {
-            updateFields['tasks.$.description'] = updateData.description;
-        }
-        if (updateData.color !== undefined) {
-            updateFields['tasks.$.color'] = updateData.color;
-        }
-
-        const taskDoc = await Task.findOneAndUpdate(
+        const taskDoc = await Task.daily.findOneAndUpdate(
             {
                 userId: user._id,
                 'tasks._id': taskId
             },
-            {
-                $set: updateFields
-            },
+            { $set: updateFields },
             { new: true }
         );
 
-        if (!taskDoc) return null;
+        if (!taskDoc) {
+            return null;
+        }
 
         return taskDoc.tasks.find(task => task._id.toString() === taskId);
     }
 
     async deleteTask(uid, date, taskId) {
-        const user = await User.findOne({ firebaseUid: uid });
-        if (!user) {
-            throw new Error('Użytkownik nie znaleziony');
+        const user = await this.getUserByFirebaseUid(uid);
+
+        if (this.storageMode === TASK_STORAGE_MODES.REFERENCED) {
+            const result = await Task.referenced.deleteOne({
+                _id: taskId,
+                userId: user._id
+            });
+
+            return result.deletedCount > 0;
         }
 
-        const [year, month, day] = date.split('-').map(Number);
-        const taskDate = new Date(Date.UTC(year, month - 1, day, 12, 0, 0));
+        const taskDate = this.getTaskDate(date);
 
-        const result = await Task.updateOne(
+        const result = await Task.daily.updateOne(
             {
                 userId: user._id,
                 date: taskDate
@@ -136,6 +237,11 @@ class TaskService {
 
         return result.modifiedCount > 0;
     }
+
+    getStorageMode() {
+        return this.storageMode;
+    }
 }
 
 module.exports = TaskService;
+module.exports.TASK_STORAGE_MODES = TASK_STORAGE_MODES;

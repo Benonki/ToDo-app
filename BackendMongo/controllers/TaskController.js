@@ -15,10 +15,10 @@ class TaskController {
             }
 
             const tasks = await this.taskService.getTasksByDate(uid, date);
-            return res.json({ tasks });
+            return res.json({ tasks, storageMode: this.taskService.getStorageMode() });
         } catch (error) {
             console.error('Get tasks error:', error);
-            return res.status(500).json({ message: 'Nie udało się pobrać zadań' });
+            return res.status(500).json({ message: error.message || 'Nie udało się pobrać zadań' });
         }
     }
 
@@ -42,10 +42,10 @@ class TaskController {
                 color
             });
 
-            return res.status(201).json({ task });
+            return res.status(201).json({ task, storageMode: this.taskService.getStorageMode() });
         } catch (error) {
             console.error('Create task error:', error);
-            return res.status(500).json({ message: 'Nie udało się utworzyć zadania' });
+            return res.status(500).json({ message: error.message || 'Nie udało się utworzyć zadania' });
         }
     }
 
@@ -61,10 +61,10 @@ class TaskController {
                 return res.status(404).json({ message: 'Nie znaleziono zadania' });
             }
 
-            return res.json({ task });
+            return res.json({ task, storageMode: this.taskService.getStorageMode() });
         } catch (error) {
             console.error('Update task error:', error);
-            return res.status(500).json({ message: 'Nie udało się zaktualizować zadania' });
+            return res.status(500).json({ message: error.message || 'Nie udało się zaktualizować zadania' });
         }
     }
 
@@ -79,10 +79,10 @@ class TaskController {
                 return res.status(404).json({ message: 'Nie znaleziono zadania' });
             }
 
-            return res.json({ message: 'Zadanie usunięte' });
+            return res.json({ message: 'Zadanie usunięte', storageMode: this.taskService.getStorageMode() });
         } catch (error) {
             console.error('Delete task error:', error);
-            return res.status(500).json({ message: 'Nie udało się usunąć zadania' });
+            return res.status(500).json({ message: error.message || 'Nie udało się usunąć zadania' });
         }
     }
 }
