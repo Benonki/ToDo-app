@@ -15,6 +15,7 @@ const createUserRoutes = require("./routes/userRoutes");
 const TaskService = require("./services/TaskService");
 const TaskController = require("./controllers/TaskController");
 const createTaskRoutes = require("./routes/taskRoutes");
+const TaskInitialData = require("./initialData/TaskInitialData");
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -44,6 +45,19 @@ app.use("/auth", createAuthRoutes(authController));
 app.use("/users", createUserRoutes(userController));
 app.use("/tasks", createTaskRoutes(taskController));
 
-app.listen(PORT, () => {
-  console.log(`Server running on port: ${PORT}`);
-});
+async function startServer() {
+  try {
+    const taskInitialData = new TaskInitialData(prisma);
+    await taskInitialData.insertIfTaskTablesAreEmpty();
+
+    app.listen(PORT, () => {
+      console.log(`Server running on port: ${PORT}`);
+    });
+  } catch (error) {
+    console.error("Blad krytyczny przy uruchamianiu serwera:", error);
+    await prisma.$disconnect();
+    process.exit(1);
+  }
+}
+
+startServer();
