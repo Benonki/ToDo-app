@@ -10,12 +10,14 @@ const dailyTaskSchema = new mongoose.Schema({
             endTime: { type: Date, required: true },
             color: String,
             title: String,
-            description: String
+            description: String,
+            tags: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Tag' }]
         }
     ]
 });
 
 dailyTaskSchema.index({ userId: 1, date: 1 });
+dailyTaskSchema.index({ 'tasks.tags': 1 });
 
 const referencedTaskSchema = new mongoose.Schema({
     userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, index: true },
@@ -24,10 +26,12 @@ const referencedTaskSchema = new mongoose.Schema({
     endTime: { type: Date, required: true },
     color: String,
     title: String,
-    description: String
+    description: String,
+    tags: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Tag' }]
 }, { timestamps: true });
 
 referencedTaskSchema.index({ userId: 1, date: 1 });
+referencedTaskSchema.index({ tags: 1 });
 
 class MongooseModelWrapper {
     constructor(modelName, schema) {

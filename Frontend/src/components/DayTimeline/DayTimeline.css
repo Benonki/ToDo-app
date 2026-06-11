@@ -158,6 +158,26 @@
     text-overflow: ellipsis;
 }
 
+
+
+.task-tags {
+    display: flex;
+    gap: 3px;
+    flex-wrap: wrap;
+    margin-top: 2px;
+    overflow: hidden;
+}
+
+.task-tag {
+    background: rgba(255, 255, 255, 0.25);
+    color: white;
+    border-radius: 999px;
+    padding: 1px 5px;
+    font-size: 8px;
+    line-height: 1.4;
+    white-space: nowrap;
+}
+
 .btn-delete {
     background: rgba(255, 255, 255, 0.3);
     color: white;
@@ -176,7 +196,27 @@
     opacity: 0;
 }
 
-.task-block:hover .btn-delete {
+.task-block:hover 
+
+.task-tags {
+    display: flex;
+    gap: 3px;
+    flex-wrap: wrap;
+    margin-top: 2px;
+    overflow: hidden;
+}
+
+.task-tag {
+    background: rgba(255, 255, 255, 0.25);
+    color: white;
+    border-radius: 999px;
+    padding: 1px 5px;
+    font-size: 8px;
+    line-height: 1.4;
+    white-space: nowrap;
+}
+
+.btn-delete {
     opacity: 1;
 }
 

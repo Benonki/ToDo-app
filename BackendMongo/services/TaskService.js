@@ -1,4 +1,5 @@
 const Task = require('../models/Task');
+const Tag = require('../models/Tag');
 const User = require('../models/User');
 
 const TASK_STORAGE_MODES = {
@@ -77,13 +78,64 @@ class TaskService {
         return new Date(Date.UTC(year, month - 1, day, 12, 0, 0, 0));
     }
 
-    buildTaskPayload(taskData) {
+    getTagIdAsString(tag) {
+        if (!tag) {
+            return null;
+        }
+
+        if (typeof tag === 'object' && tag._id) {
+            return tag._id.toString();
+        }
+
+        return tag.toString();
+    }
+
+    async formatTasksForResponse(tasks) {
+        const taskObjects = (tasks || []).map((task) => (
+            typeof task.toObject === 'function' ? task.toObject() : task
+        ));
+
+        const tagIds = taskObjects.flatMap((task) => (
+            Array.isArray(task.tags)
+                ? task.tags.map((tag) => this.getTagIdAsString(tag)).filter(Boolean)
+                : []
+        ));
+
+        const tagDocuments = await Tag.findByIds(tagIds);
+        const tagMap = new Map(
+            tagDocuments.map((tag) => [tag._id.toString(), tag.name])
+        );
+
+        return taskObjects.map((task) => ({
+            ...task,
+            tags: Array.isArray(task.tags)
+                ? task.tags
+                    .map((tag) => {
+                        if (typeof tag === 'object' && tag.name) {
+                            return tag.name;
+                        }
+
+                        const tagId = this.getTagIdAsString(tag);
+                        return tagMap.get(tagId) || null;
+                    })
+                    .filter(Boolean)
+                : []
+        }));
+    }
+
+    async formatTaskForResponse(task) {
+        const formattedTasks = await this.formatTasksForResponse(task ? [task] : []);
+        return formattedTasks[0] || null;
+    }
+
+    async buildTaskPayload(taskData) {
         const newTask = {
             startTime: new Date(taskData.startTime),
             endTime: new Date(taskData.endTime),
             title: taskData.title || '',
             description: taskData.description || '',
-            color: taskData.color || '#4A90E2'
+            color: taskData.color || '#4A90E2',
+            tags: await Tag.findOrCreateMany(taskData.tags)
         };
 
         if (isNaN(newTask.startTime.getTime()) || isNaN(newTask.endTime.getTime())) {
@@ -93,7 +145,7 @@ class TaskService {
         return newTask;
     }
 
-    buildUpdateFields(updateData, useArrayPrefix = false) {
+    async buildUpdateFields(updateData, useArrayPrefix = false) {
         const prefix = useArrayPrefix ? 'tasks.$.' : '';
         const updateFields = {};
 
@@ -115,6 +167,9 @@ class TaskService {
         if (updateData.color !== undefined) {
             updateFields[`${prefix}color`] = updateData.color;
         }
+        if (updateData.tags !== undefined) {
+            updateFields[`${prefix}tags`] = await Tag.findOrCreateMany(updateData.tags);
+        }
 
         return updateFields;
     }
@@ -135,7 +190,7 @@ class TaskService {
                 { sort: { startTime: 1 } }
             );
 
-            return tasks.map(task => task.toObject());
+            return this.formatTasksForResponse(tasks);
         }
 
         const taskDoc = await Task.daily.findOne({
@@ -150,23 +205,27 @@ class TaskService {
             return [];
         }
 
-        return taskDoc.tasks
+        const sortedTasks = taskDoc.tasks
             .map(task => task.toObject())
             .sort((a, b) => new Date(a.startTime) - new Date(b.startTime));
+
+        return this.formatTasksForResponse(sortedTasks);
     }
 
     async createTask(uid, taskData) {
         const user = await this.getUserByFirebaseUid(uid);
         const { date } = taskData;
         const taskDate = this.getTaskDate(date);
-        const newTask = this.buildTaskPayload(taskData);
+        const newTask = await this.buildTaskPayload(taskData);
 
         if (this.storageMode === TASK_STORAGE_MODES.REFERENCED) {
-            return Task.referenced.create({
+            const task = await Task.referenced.create({
                 userId: user._id,
                 date: taskDate,
                 ...newTask
             });
+
+            return this.formatTaskForResponse(task);
         }
 
         let taskDoc = await Task.daily.findOne({
@@ -185,14 +244,15 @@ class TaskService {
             });
         }
 
-        return taskDoc.tasks[taskDoc.tasks.length - 1];
+        const createdTask = taskDoc.tasks[taskDoc.tasks.length - 1];
+        return this.formatTaskForResponse(createdTask);
     }
 
     async updateTask(uid, taskId, updateData) {
         const user = await this.getUserByFirebaseUid(uid);
 
         if (this.storageMode === TASK_STORAGE_MODES.REFERENCED) {
-            const updateFields = this.buildUpdateFields(updateData, false);
+            const updateFields = await this.buildUpdateFields(updateData, false);
 
             const task = await Task.referenced.findOneAndUpdate(
                 {
@@ -203,10 +263,10 @@ class TaskService {
                 { new: true }
             );
 
-            return task;
+            return this.formatTaskForResponse(task);
         }
 
-        const updateFields = this.buildUpdateFields(updateData, true);
+        const updateFields = await this.buildUpdateFields(updateData, true);
         delete updateFields['tasks.$.date'];
 
         const taskDoc = await Task.daily.findOneAndUpdate(
@@ -222,7 +282,8 @@ class TaskService {
             return null;
         }
 
-        return taskDoc.tasks.find(task => task._id.toString() === taskId);
+        const updatedTask = taskDoc.tasks.find(task => task._id.toString() === taskId);
+        return this.formatTaskForResponse(updatedTask);
     }
 
     async deleteTask(uid, date, taskId) {

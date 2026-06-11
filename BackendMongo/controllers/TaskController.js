@@ -25,7 +25,7 @@ class TaskController {
     async createTask(req, res) {
         try {
             const { uid } = req.firebaseUser;
-            const { date, startTime, endTime, title, description, color } = req.body;
+            const { date, startTime, endTime, title, description, color, tags } = req.body;
 
             if (!date || !startTime || !endTime) {
                 return res.status(400).json({
@@ -39,7 +39,8 @@ class TaskController {
                 endTime,
                 title,
                 description,
-                color
+                color,
+                tags
             });
 
             return res.status(201).json({ task, storageMode: this.taskService.getStorageMode() });

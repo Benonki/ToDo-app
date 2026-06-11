@@ -10,6 +10,12 @@ const PREDEFINED_COLORS = [
     { id: 5, color: '#9B5CE2', name: 'Fioletowy' }
 ];
 
+const getTagName = (tag) => {
+    if (typeof tag === 'string') return tag;
+    if (tag && typeof tag === 'object') return tag.name || tag.label || tag.value || '';
+    return '';
+};
+
 export default function DayTimeline({ date, tasks, onAddTask, onUpdateTask, onDeleteTask }) {
     const [showForm, setShowForm] = useState(false);
     const [editingTask, setEditingTask] = useState(null);
@@ -224,7 +230,8 @@ export default function DayTimeline({ date, tasks, onAddTask, onUpdateTask, onDe
             endTime: endTime.toISOString(),
             title: formData.title,
             description: formData.description,
-            color: formData.color
+            color: formData.color,
+            tags: formData.tags || []
         };
 
         if (editingTask) {
@@ -297,7 +304,10 @@ export default function DayTimeline({ date, tasks, onAddTask, onUpdateTask, onDe
                         }),
                         title: editingTask.title,
                         description: editingTask.description,
-                        color: editingTask.color
+                        color: editingTask.color,
+                        tags: Array.isArray(editingTask.tags)
+                            ? editingTask.tags.map(getTagName).filter(Boolean)
+                            : []
                     } : null)}
                 />
             )}
@@ -351,6 +361,16 @@ export default function DayTimeline({ date, tasks, onAddTask, onUpdateTask, onDe
                                     <span className="task-title">{task.title}</span>
                                     {task.description && (
                                         <span className="task-desc">{task.description}</span>
+                                    )}
+                                    {Array.isArray(task.tags) && task.tags.length > 0 && (
+                                        <div className="task-tags">
+                                            {task.tags.slice(0, 3).map((tag) => {
+                                                const tagName = getTagName(tag);
+                                                return tagName ? (
+                                                    <span key={tagName} className="task-tag">#{tagName}</span>
+                                                ) : null;
+                                            })}
+                                        </div>
                                     )}
                                 </div>
                                 <button

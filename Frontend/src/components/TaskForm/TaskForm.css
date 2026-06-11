@@ -105,3 +105,10 @@
 .btn-cancel:hover {
     background: #d0d0d0;
 }
+
+.form-hint {
+    display: block;
+    margin-top: 4px;
+    color: #888;
+    font-size: 12px;
+}
