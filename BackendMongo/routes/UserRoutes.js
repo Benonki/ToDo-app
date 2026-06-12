@@ -1,20 +1,13 @@
 const express = require('express');
-const UserController = require('../controllers/UserController');
-const { verifyFirebaseToken } = require('../middleware/auth');
+const verifyFirebaseToken = require('../middleware/auth');
 
-const router = express.Router();
-const userController = new UserController();
+function createUserRoutes(userController) {
+  const router = express.Router();
 
-router.get(
-    '/profile',
-    verifyFirebaseToken,
-    userController.getProfile.bind(userController)
-);
+  router.get('/profile', verifyFirebaseToken, userController.getProfile);
+  router.put('/profile', verifyFirebaseToken, userController.updateProfile);
 
-router.put(
-    '/profile',
-    verifyFirebaseToken,
-    userController.updateProfile.bind(userController)
-);
+  return router;
+}
 
-module.exports = router;
+module.exports = createUserRoutes;

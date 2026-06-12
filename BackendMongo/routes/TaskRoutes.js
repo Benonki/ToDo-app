@@ -1,32 +1,19 @@
 const express = require('express');
-const TaskController = require('../controllers/TaskController');
-const { verifyFirebaseToken } = require('../middleware/auth');
+const verifyFirebaseToken = require('../middleware/auth');
 
-const router = express.Router();
-const taskController = new TaskController();
+function createTaskRoutes(taskController) {
+  const router = express.Router();
 
-router.get(
-    '/',
-    verifyFirebaseToken,
-    taskController.getTasks.bind(taskController)
-);
-
-router.post(
-    '/',
-    verifyFirebaseToken,
-    taskController.createTask.bind(taskController)
-);
-
-router.put(
-    '/:taskId',
-    verifyFirebaseToken,
-    taskController.updateTask.bind(taskController)
-);
-
-router.delete(
+  router.get('/', verifyFirebaseToken, taskController.getTasks);
+  router.post('/', verifyFirebaseToken, taskController.createTask);
+  router.put('/:taskId', verifyFirebaseToken, taskController.updateTask);
+  router.delete(
     '/:date/:taskId',
     verifyFirebaseToken,
-    taskController.deleteTask.bind(taskController)
-);
+    taskController.deleteTask,
+  );
 
-module.exports = router;
+  return router;
+}
+
+module.exports = createTaskRoutes;

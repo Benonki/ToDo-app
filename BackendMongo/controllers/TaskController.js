@@ -1,91 +1,95 @@
-const TaskService = require('../services/TaskService');
-
 class TaskController {
-    constructor() {
-        this.taskService = new TaskService();
+  constructor(taskService) {
+    this.taskService = taskService;
+  }
+
+  getTasks = async (req, res) => {
+    try {
+      const { uid } = req.firebaseUser;
+      const { date } = req.query;
+
+      if (!date) {
+        return res.status(400).json({ message: 'Data jest wymagana' });
+      }
+
+      const tasks = await this.taskService.getTasksByDate(uid, date);
+      return res.json({ tasks });
+    } catch (error) {
+      console.error('Get tasks error:', error);
+      return res.status(500).json({
+        message: error.message || 'Nie udalo sie pobrac zadan',
+      });
     }
+  };
 
-    async getTasks(req, res) {
-        try {
-            const { uid } = req.firebaseUser;
-            const { date } = req.query;
+  createTask = async (req, res) => {
+    try {
+      const { uid } = req.firebaseUser;
+      const { date, startTime, endTime, title, description, color, tags } =
+        req.body;
 
-            if (!date) {
-                return res.status(400).json({ message: 'Data jest wymagana' });
-            }
+      if (!date || !startTime || !endTime) {
+        return res.status(400).json({
+          message: 'Data, czas rozpoczecia i zakonczenia sa wymagane',
+        });
+      }
 
-            const tasks = await this.taskService.getTasksByDate(uid, date);
-            return res.json({ tasks, storageMode: this.taskService.getStorageMode() });
-        } catch (error) {
-            console.error('Get tasks error:', error);
-            return res.status(500).json({ message: error.message || 'Nie udało się pobrać zadań' });
-        }
+      const task = await this.taskService.createTask(uid, {
+        date,
+        startTime,
+        endTime,
+        title,
+        description,
+        color,
+        tags,
+      });
+
+      return res.status(201).json({ task });
+    } catch (error) {
+      console.error('Create task error:', error);
+      return res.status(500).json({
+        message: error.message || 'Nie udalo sie utworzyc zadania',
+      });
     }
+  };
 
-    async createTask(req, res) {
-        try {
-            const { uid } = req.firebaseUser;
-            const { date, startTime, endTime, title, description, color, tags } = req.body;
+  updateTask = async (req, res) => {
+    try {
+      const { uid } = req.firebaseUser;
+      const { taskId } = req.params;
+      const task = await this.taskService.updateTask(uid, taskId, req.body);
 
-            if (!date || !startTime || !endTime) {
-                return res.status(400).json({
-                    message: 'Data, czas rozpoczęcia i zakończenia są wymagane'
-                });
-            }
+      if (!task) {
+        return res.status(404).json({ message: 'Nie znaleziono zadania' });
+      }
 
-            const task = await this.taskService.createTask(uid, {
-                date,
-                startTime,
-                endTime,
-                title,
-                description,
-                color,
-                tags
-            });
-
-            return res.status(201).json({ task, storageMode: this.taskService.getStorageMode() });
-        } catch (error) {
-            console.error('Create task error:', error);
-            return res.status(500).json({ message: error.message || 'Nie udało się utworzyć zadania' });
-        }
+      return res.json({ task });
+    } catch (error) {
+      console.error('Update task error:', error);
+      return res.status(500).json({
+        message: error.message || 'Nie udalo sie zaktualizowac zadania',
+      });
     }
+  };
 
-    async updateTask(req, res) {
-        try {
-            const { uid } = req.firebaseUser;
-            const { taskId } = req.params;
-            const updateData = req.body;
+  deleteTask = async (req, res) => {
+    try {
+      const { uid } = req.firebaseUser;
+      const { date, taskId } = req.params;
+      const deleted = await this.taskService.deleteTask(uid, date, taskId);
 
-            const task = await this.taskService.updateTask(uid, taskId, updateData);
+      if (!deleted) {
+        return res.status(404).json({ message: 'Nie znaleziono zadania' });
+      }
 
-            if (!task) {
-                return res.status(404).json({ message: 'Nie znaleziono zadania' });
-            }
-
-            return res.json({ task, storageMode: this.taskService.getStorageMode() });
-        } catch (error) {
-            console.error('Update task error:', error);
-            return res.status(500).json({ message: error.message || 'Nie udało się zaktualizować zadania' });
-        }
+      return res.json({ message: 'Zadanie usuniete' });
+    } catch (error) {
+      console.error('Delete task error:', error);
+      return res.status(500).json({
+        message: error.message || 'Nie udalo sie usunac zadania',
+      });
     }
-
-    async deleteTask(req, res) {
-        try {
-            const { uid } = req.firebaseUser;
-            const { taskId, date } = req.params;
-
-            const result = await this.taskService.deleteTask(uid, date, taskId);
-
-            if (!result) {
-                return res.status(404).json({ message: 'Nie znaleziono zadania' });
-            }
-
-            return res.json({ message: 'Zadanie usunięte', storageMode: this.taskService.getStorageMode() });
-        } catch (error) {
-            console.error('Delete task error:', error);
-            return res.status(500).json({ message: error.message || 'Nie udało się usunąć zadania' });
-        }
-    }
+  };
 }
 
 module.exports = TaskController;
