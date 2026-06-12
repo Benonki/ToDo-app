@@ -59,11 +59,14 @@ class TaskRepository {
     return DatabaseQueryTimer.measure('Task.save', () => taskDocument.save());
   }
 
-  async deleteDailyTaskByUserAndDate(userId, date, taskId) {
+  async deleteDailyTaskByUserAndTaskId(userId, taskId) {
     return DatabaseQueryTimer.measure('Task.deleteNestedTask', () =>
       this.dailyModel
         .updateOne(
-          { userId, date },
+          {
+            userId,
+            'tasks._id': taskId,
+          },
           {
             $pull: {
               tasks: { _id: taskId },

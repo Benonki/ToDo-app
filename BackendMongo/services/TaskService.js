@@ -157,10 +157,8 @@ class TaskService {
       return result.deletedCount > 0;
     }
 
-    const taskDate = this.getTaskDate(date);
-    const result = await this.taskRepository.deleteDailyTaskByUserAndDate(
+    const result = await this.taskRepository.deleteDailyTaskByUserAndTaskId(
       user._id,
-      taskDate,
       taskId,
     );
 
