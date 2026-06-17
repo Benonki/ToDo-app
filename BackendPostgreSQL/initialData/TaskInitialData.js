@@ -141,6 +141,7 @@ class TaskInitialData {
         title: this.defaultTitle,
         description: this.defaultDescription,
         color: this.defaultColor,
+        tags: [],
       });
 
       relationalTasks.push({

@@ -9,10 +9,12 @@ class TaskService {
   constructor(
     userRepository,
     taskRepository,
+    tagRepository,
     storageMode = process.env.TASK_STORAGE_MODE,
   ) {
     this.userRepository = userRepository;
     this.taskRepository = taskRepository;
+    this.tagRepository = tagRepository;
     this.storageMode = this.normalizeStorageMode(storageMode);
   }
 
@@ -55,9 +57,11 @@ class TaskService {
       endOfDay,
     );
 
-    return this.getTaskList(taskDoc).sort(
+    const tasks = this.getTaskList(taskDoc).sort(
       (a, b) => new Date(a.startTime) - new Date(b.startTime),
     );
+
+    return this.formatJsonbTasksForResponse(tasks);
   }
 
   async getRelationalTasksByDate(userId, date) {
@@ -83,7 +87,7 @@ class TaskService {
 
   async createJsonbTask(userId, taskData) {
     const taskDate = this.getTaskDate(taskData.date);
-    const newTask = this.buildJsonbTaskPayload(taskData);
+    const newTask = await this.buildJsonbTaskPayload(taskData);
 
     let taskDoc = await this.taskRepository.findByUserAndDate(userId, taskDate);
 
@@ -98,13 +102,12 @@ class TaskService {
       });
     }
 
-    return this.getTaskList(taskDoc).at(-1);
+    return this.formatJsonbTaskForResponse(this.getTaskList(taskDoc).at(-1));
   }
 
   async createRelationalTask(userId, taskData) {
-    const taskItem = await this.taskRepository.createTaskItem(
-      this.buildRelationalTaskPayload(userId, taskData),
-    );
+    const taskPayload = await this.buildRelationalTaskPayload(userId, taskData);
+    const taskItem = await this.taskRepository.createTaskItem(taskPayload);
 
     return this.toResponseTask(taskItem);
   }
@@ -131,18 +134,18 @@ class TaskService {
 
     const updatedTask = {
       ...tasks[taskIndex],
-      ...this.buildJsonbUpdateFields(updateData),
+      ...(await this.buildJsonbUpdateFields(updateData)),
     };
 
     tasks[taskIndex] = updatedTask;
 
     await this.taskRepository.updateTasks(taskDoc.id, tasks);
 
-    return updatedTask;
+    return this.formatJsonbTaskForResponse(updatedTask);
   }
 
   async updateRelationalTask(userId, taskId, updateData) {
-    const updateFields = this.buildRelationalUpdateFields(updateData);
+    const updateFields = await this.buildRelationalUpdateFields(updateData);
 
     if (Object.keys(updateFields).length === 0) {
       const taskItem = await this.taskRepository.findTaskItemByIdAndUser(
@@ -211,7 +214,9 @@ class TaskService {
     );
   }
 
-  buildJsonbTaskPayload(taskData) {
+  async buildJsonbTaskPayload(taskData) {
+    const tags = await this.findOrCreateTagDocuments(taskData.tags);
+
     return {
       _id: randomUUID(),
       startTime: this.parseDateTime(taskData.startTime),
@@ -219,11 +224,13 @@ class TaskService {
       title: taskData.title || "",
       description: taskData.description || "",
       color: taskData.color || "#4A90E2",
+      tags: tags.map((tag) => tag.id),
     };
   }
 
-  buildRelationalTaskPayload(userId, taskData) {
-    return {
+  async buildRelationalTaskPayload(userId, taskData) {
+    const tags = await this.findOrCreateTagDocuments(taskData.tags);
+    const payload = {
       userId,
       date: this.getTaskDate(taskData.date),
       startTime: this.parseDateObject(taskData.startTime),
@@ -232,10 +239,20 @@ class TaskService {
       description: taskData.description || "",
       color: taskData.color || "#4A90E2",
     };
+
+    const tagConnectData = this.buildTagConnectData(tags);
+
+    if (tagConnectData.length > 0) {
+      payload.tags = {
+        connect: tagConnectData,
+      };
+    }
+
+    return payload;
   }
 
-  buildJsonbUpdateFields(updateData) {
-    return {
+  async buildJsonbUpdateFields(updateData) {
+    const updateFields = {
       ...(updateData.startTime && {
         startTime: this.parseDateTime(updateData.startTime),
       }),
@@ -248,10 +265,17 @@ class TaskService {
       }),
       ...(updateData.color !== undefined && { color: updateData.color }),
     };
+
+    if (updateData.tags !== undefined) {
+      const tags = await this.findOrCreateTagDocuments(updateData.tags);
+      updateFields.tags = tags.map((tag) => tag.id);
+    }
+
+    return updateFields;
   }
 
-  buildRelationalUpdateFields(updateData) {
-    return {
+  async buildRelationalUpdateFields(updateData) {
+    const updateFields = {
       ...(updateData.date && { date: this.getTaskDate(updateData.date) }),
       ...(updateData.startTime && {
         startTime: this.parseDateObject(updateData.startTime),
@@ -265,6 +289,15 @@ class TaskService {
       }),
       ...(updateData.color !== undefined && { color: updateData.color }),
     };
+
+    if (updateData.tags !== undefined) {
+      const tags = await this.findOrCreateTagDocuments(updateData.tags);
+      updateFields.tags = {
+        set: this.buildTagConnectData(tags),
+      };
+    }
+
+    return updateFields;
   }
 
   toResponseTask(taskItem) {
@@ -278,7 +311,84 @@ class TaskService {
       title: taskItem.title,
       description: taskItem.description,
       color: taskItem.color,
+      tags: Array.isArray(taskItem.tags)
+        ? taskItem.tags.map((tag) => tag.name).filter(Boolean)
+        : [],
     };
+  }
+
+  async formatJsonbTasksForResponse(tasks) {
+    const tagIds = (tasks || []).flatMap((task) =>
+      Array.isArray(task.tags)
+        ? task.tags.map((tag) => this.getTagIdAsString(tag)).filter(Boolean)
+        : [],
+    );
+
+    const tagDocuments = await this.tagRepository.findByIds(tagIds);
+    const tagMap = new Map(tagDocuments.map((tag) => [tag.id, tag.name]));
+
+    return (tasks || []).map((task) => ({
+      ...task,
+      tags: Array.isArray(task.tags)
+        ? task.tags
+            .map((tag) => {
+              if (typeof tag === "object" && tag.name) {
+                return tag.name;
+              }
+
+              const tagId = this.getTagIdAsString(tag);
+
+              if (tagId) {
+                return tagMap.get(tagId) || null;
+              }
+
+              return typeof tag === "string" ? tag : null;
+            })
+            .filter(Boolean)
+        : [],
+    }));
+  }
+
+  async formatJsonbTaskForResponse(task) {
+    const formattedTasks = await this.formatJsonbTasksForResponse(
+      task ? [task] : [],
+    );
+
+    return formattedTasks[0] || null;
+  }
+
+  async findOrCreateTagDocuments(tags) {
+    return this.tagRepository.findOrCreateMany(tags);
+  }
+
+  buildTagConnectData(tags) {
+    return (tags || []).map((tag) => ({ id: tag.id }));
+  }
+
+  getTagIdAsString(tag) {
+    if (!tag) {
+      return null;
+    }
+
+    if (typeof tag === "object" && tag.id) {
+      return tag.id.toString();
+    }
+
+    if (typeof tag === "object" && tag._id) {
+      return tag._id.toString();
+    }
+
+    if (typeof tag === "string" && this.isLikelyUuid(tag)) {
+      return tag;
+    }
+
+    return null;
+  }
+
+  isLikelyUuid(value) {
+    return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
+      value,
+    );
   }
 
   getTaskList(taskDoc) {

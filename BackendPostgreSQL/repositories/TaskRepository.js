@@ -68,6 +68,9 @@ class TaskRepository {
         orderBy: {
           startTime: "asc",
         },
+        include: {
+          tags: true,
+        },
       }),
     );
   }
@@ -79,6 +82,9 @@ class TaskRepository {
           id: taskId,
           userId,
         },
+        include: {
+          tags: true,
+        },
       }),
     );
   }
@@ -87,6 +93,9 @@ class TaskRepository {
     return DatabaseQueryTimer.measure("TaskItem.create", () =>
       this.prisma.taskItem.create({
         data,
+        include: {
+          tags: true,
+        },
       }),
     );
   }
@@ -107,6 +116,9 @@ class TaskRepository {
       return this.prisma.taskItem.update({
         where: { id: taskId },
         data,
+        include: {
+          tags: true,
+        },
       });
     });
   }

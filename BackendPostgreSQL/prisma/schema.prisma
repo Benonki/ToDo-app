@@ -37,7 +37,17 @@ model TaskItem {
   color       String   @default("#4A90E2")
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tags Tag[]
 
   @@index([userId, date])
   @@index([userId, startTime])
+}
+
+model Tag {
+  id             String     @id @default(uuid())
+  name           String
+  normalizedName String     @unique
+  createdAt      DateTime   @default(now())
+  updatedAt      DateTime   @updatedAt
+  taskItems      TaskItem[]
 }

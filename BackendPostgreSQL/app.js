@@ -6,6 +6,7 @@ const prisma = require("./lib/prismaClient");
 
 const UserRepository = require("./repositories/UserRepository");
 const TaskRepository = require("./repositories/TaskRepository");
+const TagRepository = require("./repositories/TagRepository");
 const AuthService = require("./services/AuthService");
 const AuthController = require("./controllers/AuthController");
 const createAuthRoutes = require("./routes/authRoutes");
@@ -34,11 +35,16 @@ app.get("/", (req, res) => {
 
 const userRepository = new UserRepository(prisma);
 const taskRepository = new TaskRepository(prisma);
+const tagRepository = new TagRepository(prisma);
 const authService = new AuthService(userRepository);
 const authController = new AuthController(authService);
 const userService = new UserService(userRepository);
 const userController = new UserController(userService);
-const taskService = new TaskService(userRepository, taskRepository);
+const taskService = new TaskService(
+  userRepository,
+  taskRepository,
+  tagRepository,
+);
 const taskController = new TaskController(taskService);
 
 app.use("/auth", createAuthRoutes(authController));
