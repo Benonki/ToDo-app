@@ -165,7 +165,7 @@ class TaskService {
     return this.toResponseTask(taskItem);
   }
 
-  async deleteTask(uid, date, taskId) {
+  async deleteTask(uid, _date, taskId) {
     const user = await this.findUser(uid);
 
     if (this.storageMode === TASK_STORAGE_MODES.RELATIONAL) {
@@ -177,12 +177,7 @@ class TaskService {
       return result.count > 0;
     }
 
-    const taskDate = this.getTaskDate(date);
-
-    const taskDoc = await this.taskRepository.findByUserAndDate(
-      user.id,
-      taskDate,
-    );
+    const taskDoc = await this.findTaskDocumentByNestedTask(user.id, taskId);
 
     if (!taskDoc) return false;
 
