@@ -128,18 +128,19 @@ class TaskInitialData {
     const referencedTasks = [];
 
     for (
-      let minutesFromStart = 0;
-      minutesFromStart < 24 * 60;
-      minutesFromStart += 15
+        let minutesFromStart = 0;
+        minutesFromStart < 24 * 60;
+        minutesFromStart += 1
     ) {
       const startTime = new Date(
-        Date.UTC(year, month - 1, day, 0, minutesFromStart, 0, 0),
+          Date.UTC(year, month - 1, day, 0, minutesFromStart, 0, 0),
       );
-      let endTime = new Date(startTime.getTime() + 15 * 60 * 1000);
 
-      if (minutesFromStart === 23 * 60 + 45) {
+      let endTime = new Date(startTime.getTime() + 60 * 1000);
+
+      if (minutesFromStart === 23 * 60 + 59) {
         endTime = new Date(
-          Date.UTC(year, month - 1, day, 23, 59, 0, 0),
+            Date.UTC(year, month - 1, day, 23, 59, 59, 999),
         );
       }
 
