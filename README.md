@@ -81,3 +81,9 @@ A ToDo app built with JavaScript and React that helps to manage our daily tasks,
    npm run dev
    ```
 7. You can open App on http://localhost:5173/ on your PC.
+
+## 🖼️ Showcase
+
+<div align="center">
+  <img src="https://github.com/Benonki/Portfolio/blob/main/StronaGlowna/sc/ToDo.png" alt="Preview of My Project">
+</div>
